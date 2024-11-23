@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: wallets_container
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://admin:qwerty@db:5432/wallets
+    depends_on:
+      - db
+  db:
+    image: postgres:latest
+    container_name: postgres_container
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: qwerty
+      POSTGRES_DB: wallets
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d wallets"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # volumes:
+    #   - db_data:/var/lib/postgresql/data
+  liquibase:
+    image: liquibase/liquibase:latest
+    container_name: liquibase_container
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./liquibase:/liqui
+    environment:
+      - LIQUIBASE_URL=jdbc:postgresql://db:5432/wallets
+      - LIQUIBASE_USERNAME=admin
+      - LIQUIBASE_PASSWORD=qwerty
+    working_dir: /liqui
+    command: --defaults-file=liquibase.properties update
+# volumes:
+#   db_data:
